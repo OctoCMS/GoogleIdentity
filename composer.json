@@ -1,0 +1,26 @@
+{
+    "name": "octo/google-identity",
+    "description": "Google Identity module for Octo CMS",
+    "minimum-stability": "dev",
+    "type"             : "library",
+    "keywords"         : ["php", "cms", "octo", "content management", "content management system", "google", "identity"],
+    "homepage"         : "http://www.octocms.net/",
+    "license"          : "BSD-2-Clause",
+
+    "authors": [
+        {
+            "name": "Dan Cryer",
+            "email": "dan@block8.co.uk",
+            "homepage": "https://www.block8.co.uk",
+            "role": "Developer"
+        }
+    ],
+
+    "require": {
+        "google/apiclient": "~1.1"
+    },
+
+    "autoload": {
+        "psr-4": { "Octo\\GoogleIdentity\\": "" }
+    }
+}
