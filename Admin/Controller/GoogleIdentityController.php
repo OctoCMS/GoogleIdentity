@@ -1,6 +1,6 @@
 <?php
 
-namespace Octo\GoogleAnalytics\Admin\Controller;
+namespace Octo\GoogleIdentity\Admin\Controller;
 
 use b8\Form\Element\Checkbox;
 use b8\Form\Element\Submit;
@@ -10,6 +10,7 @@ use Octo\Admin\Controller;
 use Octo\Admin\Menu;
 use Octo\Admin\Form as FormElement;
 use Octo\Form\Element\OnOffSwitch;
+use Octo\GoogleIdentity\GoogleLoginButton;
 use Octo\Store;
 use Octo\System\Model\Setting;
 use Octo\System\Model\User;
@@ -23,19 +24,6 @@ class GoogleIdentityController extends Controller
     }
 
     public function auth()
-    {
-        $auth = 'login';
-
-        if (array_key_exists('auth', $_SESSION)) {
-            $auth = $_SESSION['auth'];
-        }
-
-        if ($auth == 'login') {
-            return $this->authLogin();
-        }
-    }
-
-    protected function authLogin()
     {
         $email = $this->getParam('email', '');
         $token = $this->getParam('token', '');
@@ -88,6 +76,29 @@ class GoogleIdentityController extends Controller
         die;
     }
 
+    public function code()
+    {
+        $client = new \Google_Client();
+        $client->setClientId(Setting::get('google-identity', 'client_id'));
+        $client->setClientSecret(Setting::get('google-identity', 'client_secret'));
+        $client->setRedirectUri('postmessage');
+        $client->authenticate($this->getParam('code'));
+
+        Setting::set('google-identity', 'access_token', $client->getAccessToken());
+
+        $this->info();
+    }
+
+    public function info()
+    {
+        $client = new \Google_Client();
+        $client->setAccessToken(Setting::get('google-identity', 'access_token'));
+
+        $service = new \Google_Service_Oauth2($client);
+        $userInfo = $service->userinfo->get();
+        die('Signed in as <strong>'.$userInfo->name.'</strong> ('.$userInfo->email.')');
+    }
+
     public function settings()
     {
         $values = Setting::getForScope('google-identity');
@@ -135,6 +146,10 @@ class GoogleIdentityController extends Controller
             $fieldset->setLabel('Google APIs');
             $form->addField($fieldset);
 
+
+            $button = GoogleLoginButton::create('access_token', 'Login to use for API access', false);
+            $button->scopes = 'https://www.googleapis.com/auth/analytics.readonly';
+            $fieldset->addField($button);
         }
 
         $submit = new Submit();

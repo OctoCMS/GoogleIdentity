@@ -1,0 +1,50 @@
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+<script src="https://apis.google.com/js/client:platform.js?onload=start" async defer></script>
+
+<div class="form-group">
+    {ifnot settings.google-identity_access_token}
+    <button id="signinButton" class="btn btn-success">Sign in to enable Google APIs</button>
+    {/ifnot}
+
+    <span class="signed-in-as"></span>
+</div>
+
+<script>
+    var auth2;
+
+    function start() {
+        gapi.load('auth2', function() {
+            auth2 = gapi.auth2.init({
+                client_id: '{@settings.google-identity_client_id}'{if scopes},
+                scope: '{@scopes}'{/if}
+            });
+
+            $('#signinButton').click(function(e) {
+                e.preventDefault();
+
+                // signInCallback defined in step 6.
+                auth2.grantOfflineAccess({'redirect_uri': 'postmessage'}).then(signInCallback);
+
+                return false;
+            });
+        });
+    }
+
+    function signInCallback(authResult) {
+        if (authResult['code']) {
+
+            // Hide the sign-in button now that the user is authorized, for example:
+            $('#signinButton').attr('style', 'display: none');
+
+            $.post('/{@adminUri}/google-identity/code', {code: authResult['code']}, function (response) {
+                $('.signed-in-as').html(response);
+            });
+        }
+    }
+
+    {if settings.google-identity_access_token}
+        $(document).ready(function () {
+            $('.signed-in-as').load('/{@adminUri}/google-identity/info');
+        });
+    {/if}
+</script>
