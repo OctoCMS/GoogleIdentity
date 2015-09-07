@@ -31,15 +31,14 @@ class GoogleIdentityController extends Controller
         $client = new \Google_Client();
         $client->setClientId(Setting::get('google-identity', 'client_id'));
         $client->setClientSecret(Setting::get('google-identity', 'client_secret'));
-        $client->setRedirectUri($this->config->get('site.url').'/'.$this->config->get('site.admin_uri').'/google-identity/auth');
+        $client->setRedirectUri($this->config->get('site.full_admin_url').'/google-identity/auth');
         $client->setScopes('email');
 
         $data = $client->verifyIdToken($token)->getAttributes();
 
         if (empty($data['payload']['email']) || $data['payload']['email'] != $email) {
             $this->errorMessage('There was a problem signing you in, please try again.', true);
-            header('Location: ' . $this->config->get('site.url') . '/' . $this->config->get('site.admin_uri') . '/session/login?unauthorized=1');
-            die;
+            $this->redirect('/session/login?logout=1');
         }
 
         $userStore = Store::get('User');
@@ -52,8 +51,7 @@ class GoogleIdentityController extends Controller
 
             if (!in_array($parts[1], $authDomains)) {
                 $this->errorMessage('You do not have permission to sign in.', true);
-                header('Location: ' . $this->config->get('site.url') . '/' . $this->config->get('site.admin_uri') . '/session/login?unauthorized=1');
-                die;
+                $this->redirect('/session/login?logout=1');
             }
 
             $user = new User();
@@ -66,14 +64,13 @@ class GoogleIdentityController extends Controller
         }
 
         $_SESSION['user_id'] = $user->getId();
-        $url = '/' . $this->config->get('site.admin_uri');
 
         if (isset($_SESSION['previous_url'])) {
-            $url = $_SESSION['previous_url'];
+            header('Location: ' . $_SESSION['previous_url']);
+            die;
         }
 
-        header('Location: ' . $url);
-        die;
+        $this->redirect('/');
     }
 
     public function code()

@@ -36,7 +36,7 @@
             // Hide the sign-in button now that the user is authorized, for example:
             $('#signinButton').attr('style', 'display: none');
 
-            $.post('/{@adminUri}/google-identity/code', {code: authResult['code']}, function (response) {
+            $.post('{@adminUri}/google-identity/code', {code: authResult['code']}, function (response) {
                 $('.signed-in-as').html(response);
             });
         }
@@ -44,7 +44,7 @@
 
     {if settings.google-identity_access_token}
         $(document).ready(function () {
-            $('.signed-in-as').load('/{@adminUri}/google-identity/info');
+            $('.signed-in-as').load('{@adminUri}/google-identity/info');
         });
     {/if}
 </script>
