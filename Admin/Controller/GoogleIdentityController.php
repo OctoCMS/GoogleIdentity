@@ -9,6 +9,7 @@ use b8\Form\FieldSet;
 use Octo\Admin\Controller;
 use Octo\Admin\Menu;
 use Octo\Admin\Form as FormElement;
+use Octo\Event;
 use Octo\Form\Element\OnOffSwitch;
 use Octo\GoogleIdentity\GoogleLoginButton;
 use Octo\Store;
@@ -143,9 +144,12 @@ class GoogleIdentityController extends Controller
             $fieldset->setLabel('Google APIs');
             $form->addField($fieldset);
 
+            $scopes = [];
+
+            Event::trigger('GoogleIdentity.GetScopes', $scopes);
 
             $button = GoogleLoginButton::create('access_token', 'Login to use for API access', false);
-            $button->scopes = 'https://www.googleapis.com/auth/analytics.readonly';
+            $button->scopes = implode(' ', array_unique($scopes));
             $fieldset->addField($button);
         }
 
