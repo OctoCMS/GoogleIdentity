@@ -38,8 +38,8 @@ class GoogleIdentityController extends Controller
         $data = $client->verifyIdToken($token)->getAttributes();
 
         if (empty($data['payload']['email']) || $data['payload']['email'] != $email) {
-            $this->errorMessage('There was a problem signing you in, please try again.', true);
-            $this->redirect('/session/login?logout=1');
+            return $this->redirect('/session/login?logout=1')
+                        ->error('There was a problem signing you in, please try again.');
         }
 
         $userStore = Store::get('User');
@@ -51,8 +51,7 @@ class GoogleIdentityController extends Controller
             $parts = explode('@', $email, 2);
 
             if (!in_array($parts[1], $authDomains)) {
-                $this->errorMessage('You do not have permission to sign in.', true);
-                $this->redirect('/session/login?logout=1');
+                return $this->redirect('/session/login?logout=1')->error('You do not have permission to sign in.');
             }
 
             $user = new User();
@@ -67,11 +66,10 @@ class GoogleIdentityController extends Controller
         $_SESSION['user_id'] = $user->getId();
 
         if (isset($_SESSION['previous_url'])) {
-            header('Location: ' . $_SESSION['previous_url']);
-            die;
+            return $this->redirect($_SESSION['previous_url']);
         }
 
-        $this->redirect('/');
+        return $this->redirect('/');
     }
 
     public function code()
@@ -94,7 +92,8 @@ class GoogleIdentityController extends Controller
 
         $service = new \Google_Service_Oauth2($client);
         $userInfo = $service->userinfo->get();
-        die('Signed in as <strong>'.$userInfo->name.'</strong> ('.$userInfo->email.')');
+
+        return $this->raw('Signed in as <strong>'.$userInfo->name.'</strong> ('.$userInfo->email.')');
     }
 
     public function settings()
