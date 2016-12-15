@@ -82,22 +82,49 @@ class GoogleIdentityController extends Controller
 
         Setting::set('google-identity', 'access_token', $client->getAccessToken());
 
-        $this->info();
+        return $this->info();
     }
 
     public function info()
     {
-        $client = new \Google_Client();
-        $client->setAccessToken(Setting::get('google-identity', 'access_token'));
+        try {
+            $token = Setting::get('google-identity', 'access_token');
 
-        $service = new \Google_Service_Oauth2($client);
-        $userInfo = $service->userinfo->get();
+            if (empty($token)) {
+                throw new \Exception('No access token set.');
+            }
 
-        return $this->raw('Signed in as <strong>'.$userInfo->name.'</strong> ('.$userInfo->email.')');
+            $client = new \Google_Client();
+            $client->setAccessToken($token);
+
+            $service = new \Google_Service_Oauth2($client);
+            $userInfo = $service->userinfo->get();
+
+            return $this->json([
+                'success' => true,
+                'name' => $userInfo->name,
+                'email' => $userInfo->email,
+                'photo' => $userInfo->picture,
+            ]);
+        } catch (\Exception $ex) {
+            Setting::set('google-identity', 'access_token', null);
+
+            return $this->json([
+                'success' => false,
+                'error' => $ex->getMessage(),
+            ]);
+        }
+    }
+
+    public function logout()
+    {
+        Setting::set('google-identity', 'access_token', null);
+        return $this->info();
     }
 
     public function settings()
     {
+        $this->setTitle('Google Identity');
         $values = Setting::getForScope('google-identity');
         $form = $this->settingsForm($values);
 
@@ -111,7 +138,11 @@ class GoogleIdentityController extends Controller
             $form->setValues($values);
         }
 
-        $this->view->form = $form;
+        $scopes = [];
+        Event::trigger('Octo.GoogleIdentity.GetScopes', $scopes);
+
+        $this->template->scopes = implode(' ', array_unique($scopes));
+        $this->template->form = $form;
     }
 
     protected function settingsForm($values)
@@ -128,7 +159,6 @@ class GoogleIdentityController extends Controller
         $fieldset->addField(Text::create('client_secret', 'Client Secret'));
 
         if (!empty($values['client_id']) && !empty($values['client_secret'])) {
-
             $fieldset = new FieldSet();
             $fieldset->setId('login');
             $fieldset->setLabel('Google Login');
@@ -136,20 +166,6 @@ class GoogleIdentityController extends Controller
 
             $fieldset->addField(OnOffSwitch::create('login_enabled', 'Enable Google Login?', false));
             $fieldset->addField(Text::create('login_auto_create', 'Auto-approved login domains:'));
-
-
-            $fieldset = new FieldSet();
-            $fieldset->setId('api');
-            $fieldset->setLabel('Google APIs');
-            $form->addField($fieldset);
-
-            $scopes = [];
-
-            Event::trigger('GoogleIdentity.GetScopes', $scopes);
-
-            $button = GoogleLoginButton::create('access_token', 'Login to use for API access', false);
-            $button->scopes = implode(' ', array_unique($scopes));
-            $fieldset->addField($button);
         }
 
         $submit = new Submit();

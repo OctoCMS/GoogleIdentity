@@ -2,11 +2,19 @@
 <script src="https://apis.google.com/js/client:platform.js?onload=start" async defer></script>
 
 <div class="form-group">
-    {ifnot settings.google-identity_access_token}
-    <button id="signinButton" class="btn btn-success">Sign in to enable Google APIs</button>
-    {/ifnot}
+    <div class="signed-in-status overlay-wrapper" style="position: relative; background: #fbfbfb; margin: 30px 0; border: 1px solid #eee; padding: 40px;">
+        <div class="signed-in-as" style="display: none;">
+            <p style="margin: 0; padding: 0;">Signed in as <strong class="name"></strong> (<span class="email"></span>). <button class="btn-sign-out btn btn-danger btn-sm">Sign out</button></p>
+        </div>
 
-    <span class="signed-in-as"></span>
+        <div class="sign-in-button" style="display: none;">
+            <button id="signinButton" class="btn btn-success btn-sm">Sign in</button>  to allow Octo to access Google APIs
+        </div>
+
+        <div class="overlay">
+            <i class="fa fa-refresh fa-spin"></i>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -21,6 +29,8 @@
 
             $('#signinButton').click(function(e) {
                 e.preventDefault();
+
+                $('.signed-in-status .overlay').show();
 
                 // signInCallback defined in step 6.
                 auth2.grantOfflineAccess({'redirect_uri': 'postmessage'}).then(signInCallback);
@@ -37,14 +47,45 @@
             $('#signinButton').attr('style', 'display: none');
 
             $.post('{@adminUri}/google-identity/code', {code: authResult['code']}, function (response) {
-                $('.signed-in-as').html(response);
+                showLoggedInAs(response);
             });
         }
     }
 
-    {if settings.google-identity_access_token}
-        $(document).ready(function () {
-            $('.signed-in-as').load('{@adminUri}/google-identity/info');
+    function updateLoggedInAs() {
+        var $wrapper = $('.signed-in-status');
+        var $loading = $wrapper.find('.overlay');
+
+        $loading.show();
+
+        $.get('{@adminUri}/google-identity/info', function (data) {
+            showLoggedInAs(data);
         });
-    {/if}
+    }
+
+    function showLoggedInAs(data) {
+        var $wrapper = $('.signed-in-status');
+        var $loading = $wrapper.find('.overlay');
+        var $button = $wrapper.find('.sign-in-button');
+        var $user = $wrapper.find('.signed-in-as');
+
+        if (data.success) {
+            $button.hide();
+            $user.show();
+            $user.find('.name').text(data.name);
+            $user.find('.email').text(data.email);
+        } else {
+            $user.hide();
+            $button.show();
+        }
+
+        $loading.hide();
+    }
+
+    $(document).ready(function () {
+        updateLoggedInAs();
+    });
+
+    $('.btn-sign-out').on('click')
+
 </script>

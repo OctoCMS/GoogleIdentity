@@ -1,0 +1,109 @@
+{% extends "@admin/layout.twig" %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="box box-primary">
+                <div class="box-body">
+                    {{ form|raw }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if setting('google-identity', 'client_id') %}
+        <div class="row">
+            <div class="col-lg-12">
+                {% include "@admin/include/sign-in.twig" with {
+                    name: "Google",
+                    logo: "/asset/img/GoogleIdentity/google-logo.svg",
+                    title: "Log in with Google to enable API access"
+                } %}
+            </div>
+        </div>
+
+        <script src="https://apis.google.com/js/client:platform.js?onload=start" async defer></script>
+        <script>
+            var auth2;
+
+            function start() {
+                gapi.load('auth2', function() {
+                    auth2 = gapi.auth2.init({
+                        client_id: '{{ setting('google-identity', 'client_id') }}'{% if scopes %},
+                    scope: '{{ scopes }}'{% endif %}
+                });
+
+                    $('#btn-log-in').click(function(e) {
+                        e.preventDefault();
+
+                        $('.box-log-in .overlay').show();
+
+                        // signInCallback defined in step 6.
+                        auth2.grantOfflineAccess({'redirect_uri': 'postmessage'}).then(signInCallback);
+
+                        return false;
+                    });
+                });
+            }
+
+            function signInCallback(authResult) {
+                if (authResult['code']) {
+                    // Hide the sign-in button now that the user is authorized, for example:
+                    $.post('{{ adminUri }}/google-identity/code', {code: authResult['code']}, function (response) {
+                        showLoggedInAs(response);
+                    });
+                }
+            }
+
+            function updateLoggedInAs() {
+                var $wrapper = $('.box-log-in');
+                var $loading = $wrapper.find('.overlay');
+
+                $loading.show();
+
+                $.get('{{ adminUri }}/google-identity/info', function (data) {
+                    showLoggedInAs(data);
+                });
+            }
+
+            function showLoggedInAs(data) {
+                var $wrapper = $('.box-log-in');
+                var $loading = $wrapper.find('.overlay');
+
+                var $loggedIn = $wrapper.find('.logged-in');
+                var $loggedOut = $wrapper.find('.logged-out');
+
+                if (data.success) {
+                    $loggedOut.hide();
+
+                    $loggedIn.show();
+                    $loggedIn.find('.name').text(data.name);
+                    $loggedIn.find('.email').text(data.email);
+                    $loggedIn.find('.photo').attr('src', data.photo);
+                } else {
+                    $loggedOut.show();
+                    $loggedIn.hide();
+                }
+
+                $loading.hide();
+            }
+
+            $(document).ready(function () {
+                updateLoggedInAs();
+            });
+
+            $('.btn-log-out').on('click', function (e) {
+                e.preventDefault();
+
+                $('.signed-in-status .overlay').show();
+
+                $.post('{{ adminUri }}/google-identity/logout', function (data) {
+                    showLoggedInAs(data);
+                });
+
+                return false;
+            });
+
+        </script>
+    {% endif %}
+{% endblock %}
