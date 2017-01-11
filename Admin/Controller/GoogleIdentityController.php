@@ -30,8 +30,8 @@ class GoogleIdentityController extends Controller
         $token = $this->getParam('token', '');
 
         $client = new \Google_Client();
-        $client->setClientId(Setting::get('google-identity', 'client_id'));
-        $client->setClientSecret(Setting::get('google-identity', 'client_secret'));
+        $client->setClientId(Setting::getSetting('google-identity', 'client_id'));
+        $client->setClientSecret(Setting::getSetting('google-identity', 'client_secret'));
         $client->setRedirectUri($this->config->get('site.full_admin_url').'/google-identity/auth');
         $client->setScopes('email');
 
@@ -46,7 +46,7 @@ class GoogleIdentityController extends Controller
         $user = $userStore->getByEmail($email);
 
         if (is_null($user)) {
-            $authDomains = Setting::get('google-identity', 'login_auto_create');
+            $authDomains = Setting::getSetting('google-identity', 'login_auto_create');
             $authDomains = explode(',', $authDomains);
             $parts = explode('@', $email, 2);
 
@@ -75,8 +75,8 @@ class GoogleIdentityController extends Controller
     public function code()
     {
         $client = new \Google_Client();
-        $client->setClientId(Setting::get('google-identity', 'client_id'));
-        $client->setClientSecret(Setting::get('google-identity', 'client_secret'));
+        $client->setClientId(Setting::getSetting('google-identity', 'client_id'));
+        $client->setClientSecret(Setting::getSetting('google-identity', 'client_secret'));
         $client->setRedirectUri('postmessage');
         $client->authenticate($this->getParam('code'));
 
@@ -88,7 +88,7 @@ class GoogleIdentityController extends Controller
     public function info()
     {
         try {
-            $token = Setting::get('google-identity', 'access_token');
+            $token = Setting::getSetting('google-identity', 'access_token');
 
             if (empty($token)) {
                 throw new \Exception('No access token set.');
